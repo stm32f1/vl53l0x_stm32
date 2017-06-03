@@ -1,0 +1,49 @@
+# Directories
+bin/
+obj/
+backup/
+tmp/
+
+# Netbeans
+nbproject/private/
+#nbproject/Makefile-*
+nbproject/Package-*
+
+*~
+.*.swp
+*.d
+GPATH
+GRTAGS
+GTAGS
+tags
+core
+memo
+
+# Lisp files
+*.lib
+*.fas
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Libraries
+*.lib
+*.a
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+/nbproject/private/
