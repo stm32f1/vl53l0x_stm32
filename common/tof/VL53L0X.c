@@ -320,17 +320,18 @@ void VL53L0X_writeReg(uint8_t reg, uint8_t value)
 
 void VL53L0X_writeReg16Bit(uint8_t reg, uint16_t value)
 {
-	//while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
+	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
 	I2C_GenerateSTART(I2C1, ENABLE);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT));
 	I2C_Send7bitAddress(I2C1, VL53L0X.address, I2C_Direction_Transmitter);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
 	I2C_SendData(I2C1, reg);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
-	I2C_SendData(I2C1, (uint8_t) (value >> 8) & 0xFF);
-	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
-	I2C_SendData(I2C1, (uint8_t) value & 0xFF);
-	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+	
+	for (size_t i = 2; i > 0; i--) {
+		I2C_SendData(I2C1, (uint8_t) (value >> (i-1)) & 0xFF);
+		while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+	}
 
 	//last_status = Wire.endTransmission(); //what??
 	I2C_GenerateSTOP(I2C1, ENABLE);
@@ -342,21 +343,18 @@ void VL53L0X_writeReg16Bit(uint8_t reg, uint16_t value)
 
 void VL53L0X_writeReg32Bit(uint8_t reg, uint32_t value)
 {
-	//while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
+	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
 	I2C_GenerateSTART(I2C1, ENABLE);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT));
 	I2C_Send7bitAddress(I2C1, VL53L0X.address, I2C_Direction_Transmitter);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
 	I2C_SendData(I2C1, reg);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
-	I2C_SendData(I2C1, (uint8_t) (value >> 24) & 0xFF);
-	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
-	I2C_SendData(I2C1, (uint8_t) (value >> 16) & 0xFF);
-	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
-	I2C_SendData(I2C1, (uint8_t) (value >> 8) & 0xFF);
-	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
-	I2C_SendData(I2C1, (uint8_t) value & 0xFF);
-	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+
+	for (size_t i = 4; i > 0; i--) {
+		I2C_SendData(I2C1, (uint8_t) (value >> (i-1)) & 0xFF);
+		while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+	}
 
 	//last_status = Wire.endTransmission();
 	I2C_GenerateSTOP(I2C1, ENABLE);
@@ -367,7 +365,7 @@ void VL53L0X_writeReg32Bit(uint8_t reg, uint32_t value)
 
 uint8_t VL53L0X_readReg(uint8_t reg)
 {
-	//while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
+	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
 	I2C_GenerateSTART(I2C1, ENABLE);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT));
 	I2C_Send7bitAddress(I2C1, VL53L0X.address, I2C_Direction_Transmitter);
@@ -377,16 +375,15 @@ uint8_t VL53L0X_readReg(uint8_t reg)
 	I2C_GenerateSTOP(I2C1, ENABLE);
 	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_STOPF));
 
-	//while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
+	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
 	I2C_GenerateSTART(I2C1, ENABLE);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT));
 	I2C_Send7bitAddress(I2C1, VL53L0X.address, I2C_Direction_Receiver);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
-	I2C_AcknowledgeConfig(I2C1, DISABLE);
-	I2C_GenerateSTOP(I2C1, ENABLE);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_RECEIVED));
 	uint8_t value = I2C_ReceiveData(I2C1);
-	I2C_AcknowledgeConfig(I2C1, ENABLE);
+	I2C_GenerateSTOP(I2C1, ENABLE);
+	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_STOPF));
 
 	return value;
 }
@@ -395,7 +392,7 @@ uint8_t VL53L0X_readReg(uint8_t reg)
 
 uint16_t VL53L0X_readReg16Bit(uint8_t reg)
 {
-	//while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
+	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
 	I2C_GenerateSTART(I2C1, ENABLE);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT));
 	I2C_Send7bitAddress(I2C1, VL53L0X.address, I2C_Direction_Transmitter);
@@ -406,22 +403,19 @@ uint16_t VL53L0X_readReg16Bit(uint8_t reg)
 	I2C_GenerateSTOP(I2C1, ENABLE);
 	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_STOPF));
 
-	//while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
+	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
 	I2C_GenerateSTART(I2C1, ENABLE);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT));
 	I2C_Send7bitAddress(I2C1, VL53L0X.address, I2C_Direction_Receiver);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
 
 	uint8_t value = 0;
-	for (size_t i = 2 - 1; i >= 0; i--) {
-		if (i == 1) {
-			I2C_AcknowledgeConfig(I2C1, DISABLE);
-			I2C_GenerateSTOP(I2C1, ENABLE);
-		}
+	for (size_t i = 4; i > 0; i--) {
 		while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_RECEIVED));
-		value |= (uint8_t) (I2C_ReceiveData(I2C1) << (8 * i));
+		value |= (uint8_t) (I2C_ReceiveData(I2C1) << (8 * (i - 1)));
 	}
-	I2C_AcknowledgeConfig(I2C1, ENABLE);
+	I2C_GenerateSTOP(I2C1, ENABLE);
+	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_STOPF));
 
 	return value;
 }
@@ -430,7 +424,7 @@ uint16_t VL53L0X_readReg16Bit(uint8_t reg)
 
 uint32_t VL53L0X_readReg32Bit(uint8_t reg)
 {
-	//while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
+	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
 	I2C_GenerateSTART(I2C1, ENABLE);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT));
 	I2C_Send7bitAddress(I2C1, VL53L0X.address, I2C_Direction_Transmitter);
@@ -442,22 +436,19 @@ uint32_t VL53L0X_readReg32Bit(uint8_t reg)
 	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_STOPF));
 
 
-	//while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
+	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
 	I2C_GenerateSTART(I2C1, ENABLE);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT));
 	I2C_Send7bitAddress(I2C1, VL53L0X.address, I2C_Direction_Receiver);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
 
 	uint8_t value = 0;
-	for (size_t i = 4 - 1; i >= 0; i--) {
-		if (i == 0) {
-			I2C_AcknowledgeConfig(I2C1, DISABLE);
-			I2C_GenerateSTOP(I2C1, ENABLE);
-		}
+	for (size_t i = 4; i > 0; i--) {
 		while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_RECEIVED));
-		value |= (uint8_t) (I2C_ReceiveData(I2C1) << (8 * i));
+		value |= (uint8_t) (I2C_ReceiveData(I2C1) << (8 * (i - 1)));
 	}
-	I2C_AcknowledgeConfig(I2C1, ENABLE);
+	I2C_GenerateSTOP(I2C1, ENABLE);
+	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_STOPF));
 
 	return value;
 }
@@ -467,7 +458,7 @@ uint32_t VL53L0X_readReg32Bit(uint8_t reg)
 
 void VL53L0X_writeMulti(uint8_t reg, uint8_t const * src, uint8_t count)
 {
-	//while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
+	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
 	I2C_GenerateSTART(I2C1, ENABLE);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT));
 	I2C_Send7bitAddress(I2C1, VL53L0X.address, I2C_Direction_Transmitter);
@@ -490,7 +481,7 @@ void VL53L0X_writeMulti(uint8_t reg, uint8_t const * src, uint8_t count)
 
 void VL53L0X_readMulti(uint8_t reg, uint8_t * dst, uint8_t count)
 {
-	//while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
+	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
 	I2C_GenerateSTART(I2C1, ENABLE);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT));
 	I2C_Send7bitAddress(I2C1, VL53L0X.address, I2C_Direction_Transmitter);
@@ -508,15 +499,12 @@ void VL53L0X_readMulti(uint8_t reg, uint8_t * dst, uint8_t count)
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
 
 	while (count-- > 0) {
-		if (count == 0) {//ディクリメントは条件分岐のあと
-			I2C_AcknowledgeConfig(I2C1, DISABLE);
-			I2C_GenerateSTOP(I2C1, ENABLE);
-		}
 		while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_RECEIVED));
 		*(dst++) = I2C_ReceiveData(I2C1);
 	}
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_RECEIVED));
-	I2C_AcknowledgeConfig(I2C1, ENABLE);
+	I2C_GenerateSTOP(I2C1, ENABLE);
+	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_STOPF));
 }
 
 // Set the return signal rate limit check value in units of MCPS (mega counts
