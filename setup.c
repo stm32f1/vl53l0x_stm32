@@ -62,6 +62,7 @@ static void I2C1_setting(void)
 	I2C_InitStructure.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
 	I2C_InitStructure.I2C_ClockSpeed = I2C_CLOCK;
 
+	I2C_DeInit(I2C1);
 	I2C_Init(I2C1, &I2C_InitStructure);
 	I2C_Cmd(I2C1, ENABLE);
 
@@ -89,11 +90,14 @@ static void SysTick_setting(void)
 static void tof_setting(void)
 {
 	VL53L0X.address = 0x52;
-	
-	while(ButtonA);
 
-	VL53L0X_init(true);
-	//VL53L0X_setTimeout(500);
+	tof_rev_id = VL53L0X_readReg(IDENTIFICATION_REVISION_ID);
+
+	xbee_printf("tof Rev ID is %d",tof_rev_id);
+
+	if(!VL53L0X_init(true)) inform_error();
+
+	VL53L0X_setTimeout(500);
 
 	//VL53L0X_startContinuous(0);
 }

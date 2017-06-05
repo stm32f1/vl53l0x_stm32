@@ -24,7 +24,7 @@
 
 // Check if timeout is enabled (set to nonzero value) and has expired
 //#define checkTimeoutExpired() (VL53L0X.io_timeout > 0 && ((uint16_t)millis() - VL53L0X.timeout_start_ms) > VL53L0X.io_timeout)
-#define checkTimeoutExpired() (1)
+#define checkTimeoutExpired() (0)
 
 // Decode VCSEL (vertical cavity surface emitting laser) pulse period in PCLKs
 // from register value
@@ -48,6 +48,8 @@ static uint32_t VL53L0X_timeoutMicrosecondsToMclks(uint32_t timeout_period_us, u
 
 //created by me
 struct vl53l0x VL53L0X;
+static uint16_t temp;
+
 
 // Constructors ////////////////////////////////////////////////////////////////
 /*
@@ -327,9 +329,9 @@ void VL53L0X_writeReg16Bit(uint8_t reg, uint16_t value)
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
 	I2C_SendData(I2C1, reg);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
-	
+
 	for (size_t i = 2; i > 0; i--) {
-		I2C_SendData(I2C1, (uint8_t) (value >> (i-1)) & 0xFF);
+		I2C_SendData(I2C1, (uint8_t) (value >> (i - 1)) & 0xFF);
 		while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
 	}
 
@@ -352,7 +354,7 @@ void VL53L0X_writeReg32Bit(uint8_t reg, uint32_t value)
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
 
 	for (size_t i = 4; i > 0; i--) {
-		I2C_SendData(I2C1, (uint8_t) (value >> (i-1)) & 0xFF);
+		I2C_SendData(I2C1, (uint8_t) (value >> (i - 1)) & 0xFF);
 		while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
 	}
 
@@ -380,10 +382,15 @@ uint8_t VL53L0X_readReg(uint8_t reg)
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT));
 	I2C_Send7bitAddress(I2C1, VL53L0X.address, I2C_Direction_Receiver);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
+	I2C_AcknowledgeConfig(I2C1, DISABLE);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_RECEIVED));
 	uint8_t value = I2C_ReceiveData(I2C1);
+	temp = I2C1->SR2;
 	I2C_GenerateSTOP(I2C1, ENABLE);
 	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_STOPF));
+	I2C_AcknowledgeConfig(I2C1, ENABLE);
+
+	if (I2C_GetFlagStatus(I2C1, I2C_FLAG_BERR)) inform_error();
 
 	return value;
 }
@@ -409,13 +416,18 @@ uint16_t VL53L0X_readReg16Bit(uint8_t reg)
 	I2C_Send7bitAddress(I2C1, VL53L0X.address, I2C_Direction_Receiver);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
 
-	uint8_t value = 0;
-	for (size_t i = 4; i > 0; i--) {
+	uint16_t value = 0;
+	for (size_t i = 2; i > 0; i--) {
+		if (i == 1) {
+			I2C_AcknowledgeConfig(I2C1, DISABLE);
+		}
 		while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_RECEIVED));
-		value |= (uint8_t) (I2C_ReceiveData(I2C1) << (8 * (i - 1)));
+		value |= (uint16_t) (I2C_ReceiveData(I2C1) << (8 * (i - 1)));
 	}
+	temp = I2C1->SR2;
 	I2C_GenerateSTOP(I2C1, ENABLE);
 	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_STOPF));
+	I2C_AcknowledgeConfig(I2C1, ENABLE);
 
 	return value;
 }
@@ -442,13 +454,18 @@ uint32_t VL53L0X_readReg32Bit(uint8_t reg)
 	I2C_Send7bitAddress(I2C1, VL53L0X.address, I2C_Direction_Receiver);
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
 
-	uint8_t value = 0;
+	uint32_t value = 0;
 	for (size_t i = 4; i > 0; i--) {
+		if (i == 1) {
+			I2C_AcknowledgeConfig(I2C1, DISABLE);
+		}
 		while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_RECEIVED));
-		value |= (uint8_t) (I2C_ReceiveData(I2C1) << (8 * (i - 1)));
+		value |= (uint32_t) (I2C_ReceiveData(I2C1) << (8 * (i - 1)));
 	}
+	//temp = I2C1->SR2;
 	I2C_GenerateSTOP(I2C1, ENABLE);
 	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_STOPF));
+	I2C_AcknowledgeConfig(I2C1, ENABLE);
 
 	return value;
 }
@@ -499,12 +516,17 @@ void VL53L0X_readMulti(uint8_t reg, uint8_t * dst, uint8_t count)
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
 
 	while (count-- > 0) {
+		if (count == 1) {
+			I2C_AcknowledgeConfig(I2C1, DISABLE);
+		}
 		while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_RECEIVED));
 		*(dst++) = I2C_ReceiveData(I2C1);
 	}
 	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_RECEIVED));
+	temp = I2C1->SR2;
 	I2C_GenerateSTOP(I2C1, ENABLE);
 	while (I2C_GetFlagStatus(I2C1, I2C_FLAG_STOPF));
+	I2C_AcknowledgeConfig(I2C1, ENABLE);
 }
 
 // Set the return signal rate limit check value in units of MCPS (mega counts
